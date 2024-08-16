@@ -1,0 +1,29 @@
+import React, { useRef } from "react";
+
+function Header({ onCreateNewMindMap, onExportMindMap, onImportMindMap }) {
+  const fileInputRef = useRef();
+
+  const triggerFileInput = () => {
+    fileInputRef.current.click();
+  };
+
+  return (
+    <header className="header">
+      <h1>Mind Map App</h1>
+      <div className="header-buttons">
+        <button onClick={onCreateNewMindMap}>Create New Mind Map</button>
+        <button onClick={onExportMindMap}>Export</button>
+        <button onClick={triggerFileInput}>Import</button>
+        <input
+          type="file"
+          accept=".json"
+          ref={fileInputRef} // Use ref to access this element
+          style={{ display: "none" }}
+          onChange={onImportMindMap}
+        />
+      </div>
+    </header>
+  );
+}
+
+export default Header;
