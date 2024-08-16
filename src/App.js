@@ -28,7 +28,17 @@ function App() {
     const title = prompt("Enter the title for your new mind map:");
     if (title) {
       const newMap = createMindMap(title);
-      setMindMaps((prevMindMaps) => [...prevMindMaps, newMap]);
+
+      // Ensure the map is not already present before adding
+      setMindMaps((prevMindMaps) => {
+        const isAlreadyPresent = prevMindMaps.some(
+          (map) => map.id === newMap.id
+        );
+        if (isAlreadyPresent) return prevMindMaps; // Avoid duplicate addition
+
+        return [...prevMindMaps, newMap];
+      });
+
       setSelectedMapId(newMap.id); // Set the new map as the selected one
     }
   };
@@ -37,21 +47,10 @@ function App() {
     setMindMaps((prevMindMaps) =>
       prevMindMaps.map((map) => (map.id === updatedMap.id ? updatedMap : map))
     );
-
-    const storedMaps = fetchMindMaps();
-    const mapIndex = storedMaps.findIndex((map) => map.id === updatedMap.id);
-    if (mapIndex !== -1) {
-      storedMaps[mapIndex] = updatedMap;
-    }
   };
 
   const handleSelectMap = (mapId) => {
-    const storedMaps = fetchMindMaps();
-    const selectedMap = storedMaps.find((map) => map.id === mapId);
-
-    if (selectedMap) {
-      setSelectedMapId(selectedMap.id);
-    }
+    setSelectedMapId(mapId);
   };
 
   const handleExportMindMap = () => {
@@ -88,56 +87,6 @@ function App() {
     }
   };
 
-  const handleOpenApiKeyDialog = () => {
-    setIsApiKeyDialogOpen(true); // Open the dialog
-  };
-
-  const handleSaveApiKey = (key) => {
-    setApiKey(key); // Save the API key in state
-    localStorage.setItem("openai_api_key", key); // Also store it in localStorage
-  };
-
-  const handleGenerateChildren = async (parentNode) => {
-    if (!apiKey) {
-      setPendingGenerationNode(parentNode); // Track the node that needs generation
-      setIsApiKeyDialogOpen(true); // Open the dialog if the key is missing
-      return;
-    }
-
-    setIsLoading(true); // Start loading animation
-    try {
-      // Simulate API call to generate children using OpenAI API
-      const newChildren = await generateChildrenUsingGPT(
-        parentNode.title,
-        [],
-        apiKey
-      );
-
-      // Append the new children to the mind map
-      const updatedMap = addGeneratedChildrenToMap(
-        selectedMap,
-        parentNode.id,
-        newChildren
-      );
-      handleMapChange(updatedMap);
-
-      setIsLoading(false); // Stop loading animation
-    } catch (error) {
-      console.error("Error fetching data from OpenAI API:", error);
-      setIsLoading(false);
-    }
-  };
-
-  const addGeneratedChildrenToMap = (map, parentNodeId, children) => {
-    const updatedNodes = map.children.map((node) =>
-      node.id === parentNodeId
-        ? { ...node, children: [...node.children, ...children] }
-        : node
-    );
-
-    return { ...map, children: updatedNodes };
-  };
-
   const selectedMap = mindMaps.find((map) => map.id === selectedMapId);
 
   return (
@@ -146,7 +95,7 @@ function App() {
         isOpen={isApiKeyDialogOpen}
         onClose={() => setIsApiKeyDialogOpen(false)}
         onSave={(key) => {
-          handleSaveApiKey(key);
+          setApiKey(key);
           setIsApiKeyDialogOpen(false);
         }}
       />
@@ -155,7 +104,6 @@ function App() {
         onCreateNewMindMap={handleCreateNewMindMap}
         onExportMindMap={handleExportMindMap}
         onImportMindMap={handleImportMindMap}
-        onOpenApiKeyDialog={handleOpenApiKeyDialog} // Correctly wired function
       />
       <div className="main-content">
         <Sidebar
@@ -168,10 +116,9 @@ function App() {
             key={selectedMap.id}
             mindMap={selectedMap}
             onMindMapChange={handleMapChange}
-            onGenerateChildren={handleGenerateChildren}
-            isLoading={isLoading} // Pass loading state to show the animation
-            apiKey={apiKey} // Pass the API key to MindMap
-            setApiKey={setApiKey} // Pass setApiKey to allow updating the key
+            apiKey={apiKey}
+            setApiKey={setApiKey}
+            isLoading={isLoading}
           />
         )}
       </div>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Node from "./Node";
 import { generateChildrenUsingGPT } from "../api/chatgpt";
 import ApiKeyDialog from "./ApiKeyDialog";
@@ -15,6 +15,16 @@ function MindMap({ mindMap, onMindMapChange, apiKey, setApiKey }) {
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false); // Control the visibility of the API key dialog
   const [pendingNodeForGeneration, setPendingNodeForGeneration] =
     useState(null); // Track the node awaiting generation
+
+  useEffect(() => {
+    // Reset the rootNode when the mindMap prop changes (e.g., when switching maps)
+    setRootNode({
+      id: "root",
+      title: mindMap.title,
+      children: mindMap.children || [],
+      notes: [],
+    });
+  }, [mindMap]);
 
   // Function to add a child node using the API
   const handleAddChild = async (parentNode) => {
@@ -44,6 +54,7 @@ function MindMap({ mindMap, onMindMapChange, apiKey, setApiKey }) {
         notes: [],
       }));
 
+      // Update the rootNode with the new children
       const updatedRootNode = addChildrenToNode(
         rootNode,
         parentNode.id,
@@ -51,7 +62,7 @@ function MindMap({ mindMap, onMindMapChange, apiKey, setApiKey }) {
       );
 
       setRootNode(updatedRootNode); // Trigger re-render with updated root node
-      onMindMapChange(updatedRootNode); // Update the parent with the new mind map state
+      onMindMapChange({ ...mindMap, children: updatedRootNode.children }); // Update the parent with the new mind map state
     } catch (error) {
       console.error("Error generating children nodes:", error);
     } finally {
@@ -73,7 +84,7 @@ function MindMap({ mindMap, onMindMapChange, apiKey, setApiKey }) {
     ]);
 
     setRootNode(updatedRootNode); // Trigger re-render with updated root node
-    onMindMapChange(updatedRootNode); // Update the parent with the new mind map state
+    onMindMapChange({ ...mindMap, children: updatedRootNode.children }); // Update the parent with the new mind map state
   };
 
   // Recursive function to add children to the correct node
@@ -100,7 +111,7 @@ function MindMap({ mindMap, onMindMapChange, apiKey, setApiKey }) {
     if (newTitle) {
       const updatedRootNode = updateNodeTitle(rootNode, node.id, newTitle);
       setRootNode(updatedRootNode); // Trigger re-render with updated node title
-      onMindMapChange(updatedRootNode); // Update the parent with the new mind map state
+      onMindMapChange({ ...mindMap, children: updatedRootNode.children }); // Update the parent with the new mind map state
     }
   };
 
@@ -126,7 +137,7 @@ function MindMap({ mindMap, onMindMapChange, apiKey, setApiKey }) {
   const handleDeleteNode = (nodeToDelete) => {
     const updatedRootNode = deleteNodeRecursive(rootNode, nodeToDelete.id);
     setRootNode(updatedRootNode); // Update the state with the new node list
-    onMindMapChange(updatedRootNode); // Update the parent with the new mind map state
+    onMindMapChange({ ...mindMap, children: updatedRootNode.children }); // Update the parent with the new mind map state
   };
 
   const deleteNodeRecursive = (node, nodeId) => {
