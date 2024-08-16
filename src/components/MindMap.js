@@ -3,7 +3,13 @@ import Node from "./Node";
 import { generateChildrenUsingGPT } from "../api/chatgpt";
 import ApiKeyDialog from "./ApiKeyDialog";
 
-function MindMap({ mindMap, onMindMapChange, apiKey, setApiKey }) {
+function MindMap({
+  mindMap,
+  onMindMapChange,
+  apiKey,
+  setApiKey,
+  onOpenDonationDialog,
+}) {
   const [rootNode, setRootNode] = useState({
     id: "root",
     title: mindMap.title,
@@ -11,13 +17,13 @@ function MindMap({ mindMap, onMindMapChange, apiKey, setApiKey }) {
     notes: [],
   });
 
-  const [isLoading, setIsLoading] = useState(false); // State for loading animation
-  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false); // Control the visibility of the API key dialog
+  const [isLoading, setIsLoading] = useState(false);
+  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
   const [pendingNodeForGeneration, setPendingNodeForGeneration] =
-    useState(null); // Track the node awaiting generation
+    useState(null);
+  const [generationClickCount, setGenerationClickCount] = useState(0); // Track the number of clicks
 
   useEffect(() => {
-    // Reset the rootNode when the mindMap prop changes (e.g., when switching maps)
     setRootNode({
       id: "root",
       title: mindMap.title,
@@ -26,27 +32,32 @@ function MindMap({ mindMap, onMindMapChange, apiKey, setApiKey }) {
     });
   }, [mindMap]);
 
-  // Function to add a child node using the API
   const handleAddChild = async (parentNode) => {
     if (!apiKey) {
-      setPendingNodeForGeneration(parentNode); // Track the node requesting generation
-      setIsApiKeyDialogOpen(true); // Open the dialog if the API key is missing
+      setPendingNodeForGeneration(parentNode);
+      setIsApiKeyDialogOpen(true);
       return;
     }
 
-    setIsLoading(true); // Start loading animation
+    // Increment the generation click counter
+    setGenerationClickCount((prevCount) => prevCount + 1);
+
+    // Show the donation dialog on the third click, only once
+    if (generationClickCount === 2 && onOpenDonationDialog) {
+      onOpenDonationDialog();
+    }
+
+    setIsLoading(true);
 
     const existingTitles = parentNode.children.map((child) => child.title);
 
     try {
-      // Generate new children using GPT, excluding existing titles
       const generatedChildren = await generateChildrenUsingGPT(
         parentNode.title,
         existingTitles,
         apiKey
       );
 
-      // Map the generated children to node objects
       const childNodes = generatedChildren.map((title) => ({
         id: `node-${Math.random().toString(36).substr(2, 9)}`,
         title,
@@ -54,23 +65,21 @@ function MindMap({ mindMap, onMindMapChange, apiKey, setApiKey }) {
         notes: [],
       }));
 
-      // Update the rootNode with the new children
       const updatedRootNode = addChildrenToNode(
         rootNode,
         parentNode.id,
         childNodes
       );
 
-      setRootNode(updatedRootNode); // Trigger re-render with updated root node
-      onMindMapChange({ ...mindMap, children: updatedRootNode.children }); // Update the parent with the new mind map state
+      setRootNode(updatedRootNode);
+      onMindMapChange({ ...mindMap, children: updatedRootNode.children });
     } catch (error) {
       console.error("Error generating children nodes:", error);
     } finally {
-      setIsLoading(false); // Stop loading animation
+      setIsLoading(false);
     }
   };
 
-  // Function to add a manual child node
   const handleAddManualChild = (parentNode, title) => {
     const childNode = {
       id: `node-${Math.random().toString(36).substr(2, 9)}`,
@@ -83,11 +92,10 @@ function MindMap({ mindMap, onMindMapChange, apiKey, setApiKey }) {
       childNode,
     ]);
 
-    setRootNode(updatedRootNode); // Trigger re-render with updated root node
-    onMindMapChange({ ...mindMap, children: updatedRootNode.children }); // Update the parent with the new mind map state
+    setRootNode(updatedRootNode);
+    onMindMapChange({ ...mindMap, children: updatedRootNode.children });
   };
 
-  // Recursive function to add children to the correct node
   const addChildrenToNode = (node, nodeId, children) => {
     if (node.id === nodeId) {
       return {
@@ -110,12 +118,11 @@ function MindMap({ mindMap, onMindMapChange, apiKey, setApiKey }) {
     const newTitle = prompt("Edit Node Title", node.title);
     if (newTitle) {
       const updatedRootNode = updateNodeTitle(rootNode, node.id, newTitle);
-      setRootNode(updatedRootNode); // Trigger re-render with updated node title
-      onMindMapChange({ ...mindMap, children: updatedRootNode.children }); // Update the parent with the new mind map state
+      setRootNode(updatedRootNode);
+      onMindMapChange({ ...mindMap, children: updatedRootNode.children });
     }
   };
 
-  // Recursive function to update a node's title
   const updateNodeTitle = (node, nodeId, newTitle) => {
     if (node.id === nodeId) {
       return {
@@ -136,33 +143,32 @@ function MindMap({ mindMap, onMindMapChange, apiKey, setApiKey }) {
 
   const handleDeleteNode = (nodeToDelete) => {
     const updatedRootNode = deleteNodeRecursive(rootNode, nodeToDelete.id);
-    setRootNode(updatedRootNode); // Update the state with the new node list
-    onMindMapChange({ ...mindMap, children: updatedRootNode.children }); // Update the parent with the new mind map state
+    setRootNode(updatedRootNode);
+    onMindMapChange({ ...mindMap, children: updatedRootNode.children });
   };
 
   const deleteNodeRecursive = (node, nodeId) => {
     if (node.id === nodeId) {
-      return null; // If it's the node to delete, return null
+      return null;
     }
     if (node.children && node.children.length > 0) {
       return {
         ...node,
         children: node.children
           .map((child) => deleteNodeRecursive(child, nodeId))
-          .filter((child) => child !== null), // Filter out deleted nodes
+          .filter((child) => child !== null),
       };
     }
     return node;
   };
 
-  // Retry generation after the API key is saved
   const handleApiKeySave = (key) => {
-    setApiKey(key); // Save the API key in the parent component
-    setIsApiKeyDialogOpen(false); // Close the dialog
+    setApiKey(key);
+    setIsApiKeyDialogOpen(false);
 
     if (pendingNodeForGeneration) {
-      handleAddChild(pendingNodeForGeneration); // Retry generation for the pending node
-      setPendingNodeForGeneration(null); // Clear the pending node tracker
+      handleAddChild(pendingNodeForGeneration);
+      setPendingNodeForGeneration(null);
     }
   };
 
@@ -173,17 +179,15 @@ function MindMap({ mindMap, onMindMapChange, apiKey, setApiKey }) {
         onAddChild={handleAddChild}
         onEdit={handleEditNode}
         onDelete={handleDeleteNode}
-        onAddManualChild={handleAddManualChild} // Pass down manual addition handler
+        onAddManualChild={handleAddManualChild}
       />
 
-      {/* Show the loading spinner if the state is loading */}
       {isLoading && (
         <div className="loading-overlay">
           <div className="loading-spinner"></div>
         </div>
       )}
 
-      {/* API Key Dialog */}
       <ApiKeyDialog
         isOpen={isApiKeyDialogOpen}
         onClose={() => setIsApiKeyDialogOpen(false)}

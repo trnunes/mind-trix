@@ -3,6 +3,10 @@ import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import MindMap from "./components/MindMap";
 import ApiKeyDialog from "./components/ApiKeyDialog";
+import ConfirmDialog from "./components/ConfirmDialog";
+import DonationDialog from "./components/DonationDialog";
+import DonationPanel from "./components/DonationPanel";
+import ButtonBar from "./components/ButtonBar";
 import { fetchMindMaps, createMindMap } from "./data";
 import "./styles.css";
 
@@ -13,33 +17,27 @@ function App() {
     localStorage.getItem("openai_api_key") ||
       process.env.REACT_APP_OPENAI_API_KEY ||
       ""
-  ); // Check for the key in local storage first
-  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false); // Control dialog visibility
-  const [isLoading, setIsLoading] = useState(false); // Control loading animation
-  const [pendingGenerationNode, setPendingGenerationNode] = useState(null); // Track the node awaiting generation
+  );
+  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [pendingGenerationNode, setPendingGenerationNode] = useState(null);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [mapToDelete, setMapToDelete] = useState(null);
+  const [isDonationDialogOpen, setIsDonationDialogOpen] = useState(false);
+  const [hasShownDonationDialog, setHasShownDonationDialog] = useState(false);
 
   useEffect(() => {
     const loadedMindMaps = fetchMindMaps();
     setMindMaps(loadedMindMaps);
-    setSelectedMapId(loadedMindMaps[0]?.id || null); // Load the first map by default
+    setSelectedMapId(loadedMindMaps[0]?.id || null);
   }, []);
 
   const handleCreateNewMindMap = () => {
     const title = prompt("Enter the title for your new mind map:");
     if (title) {
       const newMap = createMindMap(title);
-
-      // Ensure the map is not already present before adding
-      setMindMaps((prevMindMaps) => {
-        const isAlreadyPresent = prevMindMaps.some(
-          (map) => map.id === newMap.id
-        );
-        if (isAlreadyPresent) return prevMindMaps; // Avoid duplicate addition
-
-        return [...prevMindMaps, newMap];
-      });
-
-      setSelectedMapId(newMap.id); // Set the new map as the selected one
+      setMindMaps((prevMindMaps) => [...prevMindMaps, newMap]);
+      setSelectedMapId(newMap.id);
     }
   };
 
@@ -63,6 +61,11 @@ function App() {
       a.download = `${selectedMap.title}.json`;
       a.click();
       URL.revokeObjectURL(url);
+
+      if (!hasShownDonationDialog) {
+        setIsDonationDialogOpen(true);
+        setHasShownDonationDialog(true);
+      }
     }
   };
 
@@ -73,10 +76,10 @@ function App() {
       reader.onload = (e) => {
         try {
           const importedMap = JSON.parse(e.target.result);
-          importedMap.id = `map-${Math.random().toString(36).substr(2, 9)}`; // Assign a new ID
+          importedMap.id = `map-${Math.random().toString(36).substr(2, 9)}`;
           setMindMaps((prevMindMaps) => {
             const updatedMaps = [...prevMindMaps, importedMap];
-            setSelectedMapId(importedMap.id); // Set the imported map as the selected one
+            setSelectedMapId(importedMap.id);
             return updatedMaps;
           });
         } catch (error) {
@@ -85,6 +88,41 @@ function App() {
       };
       reader.readAsText(file);
     }
+  };
+
+  const handleDeleteMindMap = (mapId) => {
+    setIsConfirmDialogOpen(true);
+    setMapToDelete(mapId);
+  };
+
+  const confirmDelete = () => {
+    if (mapToDelete) {
+      setMindMaps((prevMindMaps) =>
+        prevMindMaps.filter((map) => map.id !== mapToDelete)
+      );
+      if (mapToDelete === selectedMapId) {
+        const remainingMaps = mindMaps.filter((map) => map.id !== mapToDelete);
+        setSelectedMapId(remainingMaps.length > 0 ? remainingMaps[0].id : null);
+      }
+      setMapToDelete(null);
+    }
+    setIsConfirmDialogOpen(false);
+  };
+
+  const cancelDelete = () => {
+    setMapToDelete(null);
+    setIsConfirmDialogOpen(false);
+  };
+
+  const handleOpenDonationDialog = () => {
+    if (!hasShownDonationDialog) {
+      setIsDonationDialogOpen(true);
+      setHasShownDonationDialog(true);
+    }
+  };
+
+  const handleCloseDonationDialog = () => {
+    setIsDonationDialogOpen(false);
   };
 
   const selectedMap = mindMaps.find((map) => map.id === selectedMapId);
@@ -100,33 +138,57 @@ function App() {
         }}
       />
 
-      <Header
-        onCreateNewMindMap={handleCreateNewMindMap}
-        onExportMindMap={handleExportMindMap}
-        onImportMindMap={handleImportMindMap}
-      />
+      <Header onCreateNewMindMap={handleCreateNewMindMap} />
+
       <div className="main-content">
         <Sidebar
           mindMaps={mindMaps}
           selectedMapId={selectedMapId}
           onSelectMap={handleSelectMap}
+          onCreateNewMindMap={handleCreateNewMindMap}
+          onDeleteMindMap={handleDeleteMindMap}
         />
-        {selectedMap && (
-          <MindMap
-            key={selectedMap.id}
-            mindMap={selectedMap}
-            onMindMapChange={handleMapChange}
-            apiKey={apiKey}
-            setApiKey={setApiKey}
-            isLoading={isLoading}
+
+        <div className="mindmap-area">
+          {/* Button Bar for Import/Export Actions */}
+          <ButtonBar
+            onExportMindMap={handleExportMindMap}
+            onImportMindMap={handleImportMindMap}
           />
-        )}
+
+          {selectedMap && (
+            <MindMap
+              key={selectedMap.id}
+              mindMap={selectedMap}
+              onMindMapChange={handleMapChange}
+              apiKey={apiKey}
+              setApiKey={setApiKey}
+              isLoading={isLoading}
+              onOpenDonationDialog={handleOpenDonationDialog}
+            />
+          )}
+        </div>
       </div>
       {isLoading && (
         <div className="loading-overlay">
           <div className="loading-spinner"></div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={isConfirmDialogOpen}
+        title="Confirm Deletion"
+        message="Are you sure you want to delete this mind map? This action cannot be undone."
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
+
+      <DonationDialog
+        isOpen={isDonationDialogOpen}
+        onClose={handleCloseDonationDialog}
+      />
+
+      <DonationPanel />
     </div>
   );
 }

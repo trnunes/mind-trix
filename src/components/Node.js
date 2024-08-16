@@ -1,12 +1,5 @@
 import React, { useState } from "react";
-
-import {
-  FaTrashAlt,
-  FaEdit,
-  FaStickyNote,
-  FaBolt,
-  FaPlusCircle,
-} from "react-icons/fa"; // Modern icons
+import { FaTrashAlt, FaEdit, FaStickyNote, FaPlusCircle } from "react-icons/fa";
 import ManualNodeDialog from "./ManualNodeDialog";
 
 function Node({ node, onAddChild, onEdit, onDelete, onAddManualChild }) {
@@ -78,7 +71,7 @@ function Node({ node, onAddChild, onEdit, onDelete, onAddManualChild }) {
           <FaEdit title="Edit Node" />
         </button>
         <button onClick={() => onAddChild(node)} className="generate-button">
-          <FaBolt title="Generate Subtopics" style={{ color: "#FFC300" }} />{" "}
+          <i className="fas fa-magic" title="Generate Subtopics"></i>
         </button>
         <button
           onClick={() => setDialogOpen(true)}

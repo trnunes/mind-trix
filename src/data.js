@@ -1,7 +1,7 @@
 let storedMindMaps = [
   {
     id: "map-1",
-    title: "Project Planning",
+    title: "Example Map - Project Planning",
     notes: [{ id: "note-1", content: "This is the first note." }],
     children: [
       {

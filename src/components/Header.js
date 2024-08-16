@@ -9,10 +9,8 @@ function Header({ onCreateNewMindMap, onExportMindMap, onImportMindMap }) {
 
   return (
     <header className="header">
-      <h1>Mind Map App</h1>
+      <h1>Generative Mind Map</h1>
       <div className="header-buttons">
-        <button onClick={onCreateNewMindMap}>Create New Mind Map</button>
-        <button onClick={onExportMindMap}>Export</button>
         <button onClick={triggerFileInput}>Import</button>
         <input
           type="file"
