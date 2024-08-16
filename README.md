@@ -1,5 +1,6 @@
-🧠 Mind Map Tool
-Welcome to the Mind Map Tool! This app is designed to help you brainstorm, organize ideas, and visualize concepts in an intuitive and powerful way. With features like AI-generated subtopics, manual node creation, and the ability to annotate nodes, this tool makes it easy to structure your thoughts, plan projects, and more.
+🧠 Mind Trix - MindMaps
+
+Welcome to the Mind Trix! This app is designed to help you brainstorm, organize ideas, and visualize concepts in an intuitive and powerful way. With features like AI-generated subtopics, manual node creation, and the ability to annotate nodes, this tool makes it easy to structure your thoughts, plan projects, and more.
 
 
 ✨ Features
@@ -17,24 +18,18 @@ npm or yarn
 Installation
 Clone the Repository:
 
-bash
-Copiar código
-git clone https://github.com/yourusername/mind-map-tool.git
-cd mind-map-tool
+> git clone https://github.com/yourusername/mind-map-tool.git
+> cd mind-trix
 Install Dependencies:
 
-bash
-Copiar código
-npm install
+> npm install
 # or
-yarn install
+> yarn install
 Run the App:
 
-bash
-Copiar código
-npm start
+> npm start
 # or
-yarn start
+> yarn start
 The app will be available at http://localhost:3000.
 
 AI Integration
@@ -44,9 +39,8 @@ Sign up at OpenAI.
 
 Get your API key and store it in an .env file:
 
-plaintext
-Copiar código
 REACT_APP_OPENAI_API_KEY=your-openai-api-key
+
 The app will prompt you to enter the API key if it's not set in the environment variables.
 
 Deployment
