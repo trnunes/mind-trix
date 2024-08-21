@@ -23,12 +23,14 @@ input {
   display: flex;
   flex: 1;
 }
+
 .mindmap-area {
   display: flex;
   flex-direction: column;
   flex: 1;
   padding: 20px;
 }
+
 /* Header Styles */
 .header {
   background-color: #333;
@@ -428,24 +430,15 @@ input {
   animation: spin 1s linear infinite;
 }
 
-/* Delete Button */
-.delete-mindmap-button {
-  background: none;
-  border: none;
-  color: #dc3545;
-  cursor: pointer;
-  font-size: 16px;
-  margin-left: 10px;
-  transition: color 0.2s ease;
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
-.delete-mindmap-button:hover {
-  color: #c82333;
-}
-
-.delete-mindmap-button i {
-  font-size: 18px;
-}
 /* Generate Button (with the same multicolor style as the sidebar button) */
 .generate-button {
   background: linear-gradient(90deg, #ff8a00, #e52e71, #9b00ff) !important;
@@ -477,68 +470,129 @@ input {
   background: linear-gradient(90deg, #ff8a00, #e52e71, #9b00ff) !important;
 }
 
-.dialog-overlay {
+/* Wizard-Style Dialog */
+.wizard-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 400px;
+  max-width: 90%;
+  z-index: 1000; /* Ensures it stays on top */
+}
+
+.wizard-step {
+  margin-top: 20px;
+}
+
+.custom-selects {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.select-option.selected {
+  border-color: #007bff;
+}
+
+.select-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #007bff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
+}
+
+.circle-filled {
+  width: 12px;
+  height: 12px;
+  background-color: #007bff;
+  border-radius: 50%;
+}
+
+.select-label h4 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.select-label p {
+  margin: 5px 0 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.fancy-textarea,
+.fancy-input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 20px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.fancy-input:focus,
+.fancy-textarea:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+.wizard-buttons {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.wizard-button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.wizard-button:hover {
+  background-color: #0056b3;
+}
+
+.wizard-button.back {
+  background-color: #6c757d;
+}
+
+.wizard-button.back:hover {
+  background-color: #5a6268;
+}
+
+/* Adding an overlay behind the wizard */
+.wizard-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.dialog {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  width: 400px;
-  max-width: 90%;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  text-align: center;
-}
-
-.dialog h2 {
-  margin-bottom: 20px;
-  font-size: 1.5rem;
-}
-
-.dialog p {
-  margin-bottom: 20px;
-  font-size: 1.1rem;
-}
-
-.dialog-actions {
-  display: flex;
-  justify-content: space-between;
-}
-
-.dialog-button {
-  padding: 10px 15px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-.confirm-button {
-  background-color: #d9534f;
-  color: white;
-}
-
-.confirm-button:hover {
-  background-color: #c9302c;
-}
-
-.cancel-button {
-  background-color: #5bc0de;
-  color: white;
-}
-
-.cancel-button:hover {
-  background-color: #31b0d5;
+  z-index: 999; /* Behind the wizard but above other content */
 }
 
 .donation-dialog-overlay {
@@ -629,7 +683,6 @@ input {
 .close-button:hover {
   color: #0056b3;
 }
-
 /* Donation Panel Styles */
 .donation-panel {
   position: fixed;
@@ -679,8 +732,8 @@ input {
 /* Button Bar Styles */
 .button-bar {
   display: flex;
-  justify-content: center; /* Center the buttons horizontally */
-  align-items: center; /* Vertically center the buttons */
+  justify-content: center;
+  align-items: center;
   padding: 10px;
   background-color: #f0f0f0;
   border-bottom: 1px solid #ccc;
@@ -701,11 +754,20 @@ input {
   background-color: #2980b9;
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+.delete-mindmap-button {
+  background: none;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: 10px;
+  transition: color 0.2s ease;
+}
+
+.delete-mindmap-button:hover {
+  color: #c82333;
+}
+
+.delete-mindmap-button i {
+  font-size: 18px;
 }

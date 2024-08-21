@@ -11,7 +11,6 @@ function Header({ onCreateNewMindMap, onExportMindMap, onImportMindMap }) {
     <header className="header">
       <h1>Generative Mind Map</h1>
       <div className="header-buttons">
-        <button onClick={triggerFileInput}>Import</button>
         <input
           type="file"
           accept=".json"

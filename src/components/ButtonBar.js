@@ -4,7 +4,7 @@ function ButtonBar({ onExportMindMap, onImportMindMap }) {
   return (
     <div className="button-bar">
       <button className="button-bar-item" onClick={onExportMindMap}>
-        Export Map
+        Save Map
       </button>
       <input
         type="file"
@@ -17,7 +17,7 @@ function ButtonBar({ onExportMindMap, onImportMindMap }) {
         className="button-bar-item"
         onClick={() => document.getElementById("import-file").click()}
       >
-        Import Map
+        Open Map
       </button>
     </div>
   );
