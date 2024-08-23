@@ -123,24 +123,6 @@ function MindMap({
     }
   };
 
-  const updateNodeTitle = (node, nodeId, newTitle) => {
-    if (node.id === nodeId) {
-      return {
-        ...node,
-        title: newTitle,
-      };
-    }
-    if (node.children && node.children.length > 0) {
-      return {
-        ...node,
-        children: node.children.map((child) =>
-          updateNodeTitle(child, nodeId, newTitle)
-        ),
-      };
-    }
-    return node;
-  };
-
   const handleDeleteNode = (nodeToDelete) => {
     const updatedRootNode = deleteNodeRecursive(rootNode, nodeToDelete.id);
     setRootNode(updatedRootNode);
@@ -172,6 +154,32 @@ function MindMap({
     }
   };
 
+  // Recursive function to update the node title
+  function updateNodeTitle(node, nodeId, newTitle) {
+    if (node.id === nodeId) {
+      return { ...node, title: newTitle };
+    }
+    if (node.children && node.children.length > 0) {
+      return {
+        ...node,
+        children: node.children.map((child) =>
+          updateNodeTitle(child, nodeId, newTitle)
+        ),
+      };
+    }
+    return node;
+  }
+
+  const handleTitleChange = (node, newTitle) => {
+    if (node.id === "root") {
+      onMindMapChange({ ...mindMap, title: newTitle });
+    }
+
+    const updatedRootNode = updateNodeTitle(rootNode, node.id, newTitle);
+    setRootNode(updatedRootNode);
+    onMindMapChange({ ...mindMap, children: updatedRootNode.children });
+  };
+
   return (
     <div className="mindmap">
       <Node
@@ -180,6 +188,7 @@ function MindMap({
         onEdit={handleEditNode}
         onDelete={handleDeleteNode}
         onAddManualChild={handleAddManualChild}
+        onTitleChange={handleTitleChange} // Pass title change handler
       />
 
       {isLoading && (

@@ -1,7 +1,9 @@
 import React, { useState } from "react";
+import qrCodeImage from "../assets/pix.jpeg"; // Path to your QR code image
 
 function DonationPanel() {
   const [isVisible, setIsVisible] = useState(true);
+  const [showQrCode, setShowQrCode] = useState(false);
 
   if (!isVisible) return null;
 
@@ -26,7 +28,19 @@ function DonationPanel() {
         >
           Donate with PayPal
         </button>
+        <button
+          onClick={() => setShowQrCode(!showQrCode)}
+          className="donation-button pix"
+        >
+          Donate with Pix
+        </button>
       </div>
+
+      {showQrCode && (
+        <div className="qr-code-container">
+          <img src={qrCodeImage} alt="Pix QR Code" />
+        </div>
+      )}
     </div>
   );
 }

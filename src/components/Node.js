@@ -2,7 +2,14 @@ import React, { useState } from "react";
 import { FaTrashAlt, FaEdit, FaStickyNote, FaPlusCircle } from "react-icons/fa";
 import ManualNodeDialog from "./ManualNodeDialog";
 
-function Node({ node, onAddChild, onEdit, onDelete, onAddManualChild }) {
+function Node({
+  node,
+  onAddChild,
+  onEdit,
+  onDelete,
+  onAddManualChild,
+  onTitleChange,
+}) {
   const [isNotesVisible, setIsNotesVisible] = useState(
     node.notes && node.notes.length > 0
   );
@@ -10,6 +17,8 @@ function Node({ node, onAddChild, onEdit, onDelete, onAddManualChild }) {
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [newNoteContent, setNewNoteContent] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState(node.title);
 
   const handleToggleExpand = () => {
     if (isExpanded) {
@@ -54,13 +63,33 @@ function Node({ node, onAddChild, onEdit, onDelete, onAddManualChild }) {
     if (onDelete) onDelete(node);
   };
 
+  const handleSaveTitle = () => {
+    if (title.trim() !== "") {
+      onTitleChange(node, title);
+      setIsEditing(false);
+    }
+  };
+
   return (
     <div className="node">
       <div className="node-header">
         <button onClick={handleToggleExpand} className="expand-collapse-button">
           {isExpanded ? "▼" : "▶"}
         </button>
-        <span>{node.title}</span>
+        {isEditing ? (
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={handleSaveTitle}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSaveTitle();
+            }}
+            autoFocus
+          />
+        ) : (
+          <span onDoubleClick={() => setIsEditing(true)}>{title}</span>
+        )}
         <button
           onClick={handleToggleNotesVisibility}
           className="toggle-notes-button"
@@ -138,6 +167,7 @@ function Node({ node, onAddChild, onEdit, onDelete, onAddManualChild }) {
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onAddManualChild={onAddManualChild}
+                onTitleChange={onTitleChange} // Ensure title change handler is passed down
               />
             </div>
           ))}
