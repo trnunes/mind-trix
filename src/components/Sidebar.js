@@ -1,17 +1,31 @@
+// src/components/Sidebar.js
+
 import React from "react";
+import PropTypes from "prop-types";
 
 function Sidebar({
+  user,
   mindMaps,
   selectedMapId,
   onSelectMap,
   onCreateNewMindMap,
-  onDeleteMindMap, // New prop for deleting a mind map
+  onDeleteMindMap,
+  onShowAuthPage,
 }) {
+  const handleCreateNewMindMap = () => {
+    if (user) {
+      onCreateNewMindMap();
+    } else {
+      // Redirect to login page with option to create a new account
+      onShowAuthPage();
+    }
+  };
+
   return (
     <div className="sidebar">
       {/* Circular Create New Mind Map Button */}
       <div className="create-mindmap-container">
-        <button className="circular-create-button" onClick={onCreateNewMindMap}>
+        <button className="circular-create-button" onClick={handleCreateNewMindMap}>
           <i className="fas fa-magic"></i>
         </button>
         <span className="create-label">New Map</span>
@@ -26,14 +40,15 @@ function Sidebar({
         {mindMaps.map((map) => (
           <div
             key={map.id}
-            className={`mindmap-item ${
-              map.id === selectedMapId ? "selected" : ""
-            }`}
+            className={`mindmap-item ${map.id === selectedMapId ? "selected" : ""}`}
           >
             <span onClick={() => onSelectMap(map.id)}>{map.title}</span>
             <button
               className="delete-mindmap-button"
-              onClick={() => onDeleteMindMap(map.id)} // This triggers the confirmation dialog
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent event from bubbling up to onSelectMap
+                onDeleteMindMap(map.id); // Triggers the confirmation dialog
+              }}
             >
               <i className="fas fa-trash"></i>
             </button>
@@ -43,5 +58,15 @@ function Sidebar({
     </div>
   );
 }
+
+Sidebar.propTypes = {
+  user: PropTypes.object, // The authenticated user object
+  mindMaps: PropTypes.array.isRequired,
+  selectedMapId: PropTypes.string,
+  onSelectMap: PropTypes.func.isRequired,
+  onCreateNewMindMap: PropTypes.func.isRequired,
+  onDeleteMindMap: PropTypes.func.isRequired,
+  onShowAuthPage: PropTypes.func.isRequired,
+};
 
 export default Sidebar;

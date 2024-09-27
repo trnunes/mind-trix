@@ -1,23 +1,29 @@
-import React, { useRef } from "react";
+// src/components/Header.js
 
-function Header({ onCreateNewMindMap, onExportMindMap, onImportMindMap }) {
-  const fileInputRef = useRef();
+import React from 'react';
 
-  const triggerFileInput = () => {
-    fileInputRef.current.click();
-  };
-
+function Header({ user, onLogout, onShowAuthPage, onSwitchToSignUp }) {
   return (
     <header className="header">
       <h1>Generative Mind Map</h1>
       <div className="header-buttons">
-        <input
-          type="file"
-          accept=".json"
-          ref={fileInputRef} // Use ref to access this element
-          style={{ display: "none" }}
-          onChange={onImportMindMap}
-        />
+        {user ? (
+          <>
+            <span className="user-info">Welcome, {user.email}</span>
+            <button className="logout-button" onClick={onLogout}>
+              Logout
+            </button>
+          </>
+        ) : (
+          <>
+            <button className="login-button" onClick={onShowAuthPage}>
+              Login
+            </button>
+            <button className="signup-button" onClick={onSwitchToSignUp}>
+              Sign Up
+            </button>
+          </>
+        )}
       </div>
     </header>
   );

@@ -1,3 +1,5 @@
+// src/components/MindMap.js
+
 import React, { useState, useEffect } from "react";
 import Node from "./Node";
 import { generateChildrenUsingGPT } from "../api/chatgpt";
@@ -10,26 +12,21 @@ function MindMap({
   setApiKey,
   onOpenDonationDialog,
 }) {
-  const [rootNode, setRootNode] = useState({
-    id: "root",
-    title: mindMap.title,
-    children: mindMap.children || [],
-    notes: [],
-  });
-
+  const [rootNode, setRootNode] = useState(null); // Start with null to handle loading state
   const [isLoading, setIsLoading] = useState(false);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
-  const [pendingNodeForGeneration, setPendingNodeForGeneration] =
-    useState(null);
+  const [pendingNodeForGeneration, setPendingNodeForGeneration] = useState(null);
   const [generationClickCount, setGenerationClickCount] = useState(0); // Track the number of clicks
 
   useEffect(() => {
-    setRootNode({
-      id: "root",
-      title: mindMap.title,
-      children: mindMap.children || [],
-      notes: [],
-    });
+    if (mindMap) {
+      setRootNode({
+        id: "root",
+        title: mindMap.title || "",
+        children: mindMap.children || [],
+        notes: mindMap.notes || [],
+      });
+    }
   }, [mindMap]);
 
   const handleAddChild = async (parentNode) => {
@@ -38,48 +35,77 @@ function MindMap({
       setIsApiKeyDialogOpen(true);
       return;
     }
-
+  
     // Increment the generation click counter
     setGenerationClickCount((prevCount) => prevCount + 1);
-
+  
     // Show the donation dialog on the third click, only once
     if (generationClickCount === 2 && onOpenDonationDialog) {
       onOpenDonationDialog();
     }
-
+  
     setIsLoading(true);
-
+  
+    // Helper function to collect titles of all ancestors
+    const getAncestorTitles = (node, currentRootNode) => {
+      let titles = [];
+      const findAncestors = (currentNode, targetNode, path = []) => {
+        if (currentNode.id === targetNode.id) {
+          return path;
+        }
+        if (currentNode.children && currentNode.children.length > 0) {
+          for (let child of currentNode.children) {
+            const foundPath = findAncestors(child, targetNode, [...path, currentNode.title]);
+            if (foundPath) {
+              return foundPath;
+            }
+          }
+        }
+        return null;
+      };
+      
+      titles = findAncestors(currentRootNode, node);
+      return titles || [];
+    };
+  
+    const ancestorTitles = getAncestorTitles(parentNode, rootNode);
+    const contextTitles = [...ancestorTitles, parentNode.title]; // Add the parent node title at the end
+  
     const existingTitles = parentNode.children.map((child) => child.title);
-
+    console.log(existingTitles);
+  
     try {
+      // Use ancestor titles as context for generating children
       const generatedChildren = await generateChildrenUsingGPT(
-        parentNode.title,
+        contextTitles.join(' > '), // Use ' > ' as a separator to provide context for the GPT model
         existingTitles,
         apiKey
       );
-
+  
       const childNodes = generatedChildren.map((title) => ({
         id: `node-${Math.random().toString(36).substr(2, 9)}`,
         title,
         children: [],
         notes: [],
       }));
-
+  
       const updatedRootNode = addChildrenToNode(
         rootNode,
         parentNode.id,
         childNodes
       );
-
+  
       setRootNode(updatedRootNode);
       onMindMapChange({ ...mindMap, children: updatedRootNode.children });
     } catch (error) {
       console.error("Error generating children nodes:", error);
+      // Display an error message to the user
+      alert("There was an error generating subtopics. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
-
+  
   const handleAddManualChild = (parentNode, title) => {
     const childNode = {
       id: `node-${Math.random().toString(36).substr(2, 9)}`,
@@ -119,7 +145,13 @@ function MindMap({
     if (newTitle) {
       const updatedRootNode = updateNodeTitle(rootNode, node.id, newTitle);
       setRootNode(updatedRootNode);
-      onMindMapChange({ ...mindMap, children: updatedRootNode.children });
+
+      // Update the mind map title if the root node was edited
+      if (node.id === "root") {
+        onMindMapChange({ ...mindMap, title: newTitle, children: updatedRootNode.children });
+      } else {
+        onMindMapChange({ ...mindMap, children: updatedRootNode.children });
+      }
     }
   };
 
@@ -171,14 +203,20 @@ function MindMap({
   }
 
   const handleTitleChange = (node, newTitle) => {
-    if (node.id === "root") {
-      onMindMapChange({ ...mindMap, title: newTitle });
-    }
-
     const updatedRootNode = updateNodeTitle(rootNode, node.id, newTitle);
     setRootNode(updatedRootNode);
-    onMindMapChange({ ...mindMap, children: updatedRootNode.children });
+
+    if (node.id === "root") {
+      onMindMapChange({ ...mindMap, title: newTitle, children: updatedRootNode.children });
+    } else {
+      onMindMapChange({ ...mindMap, children: updatedRootNode.children });
+    }
   };
+
+  // Handle loading state or absence of mindMap data
+  if (!rootNode) {
+    return <div>Loading mind map...</div>;
+  }
 
   return (
     <div className="mindmap">
