@@ -34,14 +34,19 @@ Mind Trix is a React web app that lets people brainstorm and organize ideas by m
 - **Acceptance**: Manual edits trigger visible confirmation, Firestore documents stay consistent, and undo restores previous node state within the session.
 
 ### C. Wizard Outcome Customization
-- **Problem**: The wizard always generates uniform tree depth and count, lacking templates or preview to adjust before committing.【F:src/App.js†L95-L147】【F:src/components/WizardDialog.js†L3-L190】  
-- **Request**: Extend the wizard with template presets (e.g., SWOT, project plan), allow toggling AI vs. manual start, and display a summary preview before creation.  
-- **Acceptance**: Users can pick a template that adjusts prompt parameters, preview the resulting structure, and either confirm or return to edit choices.
+- **Problem**: The wizard always generates uniform tree depth and count, lacking templates or preview to adjust before committing.【F:src/App.js†L95-L147】【F:src/components/WizardDialog.js†L3-L193】
+- **Request**: Extend the wizard with template presets (e.g., SWOT, project plan), allow toggling AI vs. manual start, and display a summary preview before creation. Surface knobs for the expected number of AI-generated children per node and the target height before the map is created so creators can validate structure in advance.【F:src/api/chatgpt.js†L1-L38】【F:src/components/WizardDialog.js†L44-L170】
+- **Acceptance**: Users can pick a template that adjusts prompt parameters, preview the resulting structure, and either confirm or return to edit choices. Preview shows projected branch count and depth, and the generated map honors those expectations unless the user chooses to override post-creation.【F:src/api/chatgpt.js†L1-L38】【F:src/components/MindMap.js†L32-L141】
 
 ### D. Library Management & Collaboration
-- **Problem**: Map ownership is single-user with no sharing or categorization, and the sidebar can become crowded.【F:src/App.js†L149-L355】【F:src/components/Sidebar.js†L24-L70】  
-- **Request**: Introduce tagging/folder support in the sidebar, enable optional read-only sharing links, and provide map-level metadata (last edited, collaborators).  
+- **Problem**: Map ownership is single-user with no sharing or categorization, and the sidebar can become crowded.【F:src/App.js†L149-L355】【F:src/components/Sidebar.js†L24-L70】
+- **Request**: Introduce tagging/folder support in the sidebar, enable optional read-only sharing links, and provide map-level metadata (last edited, collaborators).
 - **Acceptance**: Sidebar groups maps by tag, share links honor read-only mode, and metadata surfaces in the list and export payloads.
+
+### E. OpenAI Access Modernization
+- **Problem**: OpenAI calls require manual key entry per session, rely on legacy Chat Completions endpoints, and expose raw errors without recovery guidance.【F:src/api/chatgpt.js†L1-L79】【F:src/components/ApiKeyDialog.js†L1-L35】
+- **Request**: Upgrade to the latest OpenAI Responses API with organization-aware headers, persist encrypted keys per user, and provide contextual retry/usage feedback when requests fail or quotas are reached.
+- **Acceptance**: Users authenticate once per device, generation requests include organization metadata, failures present actionable UI copy with cooldown timers, and logs avoid storing raw keys while still enabling audit trails.【F:src/components/MindMap.js†L32-L187】【F:src/components/ApiKeyDialog.js†L1-L35】
 
 ## 6. Technical Notes for Implementation
 - **Data Model**: Mind maps store `title`, `userId`, root-level `children`, and `notes` arrays; child nodes include recursive `children` and `notes`, each with random IDs for client-generated uniqueness.【F:src/App.js†L103-L138】【F:src/components/MindMap.js†L21-L123】  
@@ -49,10 +54,21 @@ Mind Trix is a React web app that lets people brainstorm and organize ideas by m
 - **State Handling**: React hooks orchestrate loading spinners, modal dialogs, and pending actions (e.g., store node waiting for API key). Ensure new features respect these patterns to avoid race conditions.【F:src/App.js†L22-L357】【F:src/components/MindMap.js†L15-L213】
 
 ## 7. Analytics & Success Metrics Hooks
-- Instrument wizard steps, AI generation attempts, manual add/edit/delete events, export/import actions, and donation interactions for funnels.  
+- Instrument wizard steps, AI generation attempts, manual add/edit/delete events, export/import actions, and donation interactions for funnels.
 - Surface analytics via Vercel or alternative pipeline while respecting user privacy and Firebase security rules.【F:src/App.js†L15-L19】【F:src/App.js†L140-L198】
 
-## 8. Open Questions
+## 8. Mind Map Generation Guardrails
+- **Expected Branching Factor**: Default AI prompts request five children per invocation; align the wizard slider with those prompts and cap auto-generation between three and seven children to balance depth with canvas readability.【F:src/api/chatgpt.js†L1-L38】【F:src/components/WizardDialog.js†L44-L170】
+- **Target Height**: Aim for a three-level tree (root + two descendant levels) on initial generation, with optional expansion toggles surfaced in the preview so creators understand expected complexity before committing.【F:src/components/MindMap.js†L32-L141】【F:src/components/WizardDialog.js†L84-L193】
+- **Quality Signals**: Track variance between requested and delivered branch counts plus the percentage of nodes exceeding the height target to tune prompts and fallback heuristics.【F:src/components/MindMap.js†L71-L123】【F:src/App.js†L140-L198】
+
+## 9. Implementation Plan (Vibe Coding Playbook)
+1. **Stabilize OpenAI Access** – Introduce a keyed client wrapper that negotiates Responses API calls, handles exponential backoff, and centralizes error mapping before wiring UI flows.【F:src/api/chatgpt.js†L1-L79】【F:src/components/MindMap.js†L32-L141】
+2. **Enrich Wizard Controls** – Extend wizard state to capture template presets, branch count, and depth expectations, then surface them in the confirmation preview for human validation.【F:src/components/WizardDialog.js†L3-L193】
+3. **Instrument Guardrails** – Emit analytics whenever actual generations deviate from requested branching/height so prompt tuning stays data-informed.【F:src/App.js†L140-L198】【F:src/components/MindMap.js†L32-L213】
+4. **Progressive Disclosure** – Layer new UI banners and tooltips so novice users learn about key storage and structure limits without overwhelming experts, following existing modal/dialog patterns.【F:src/components/ApiKeyDialog.js†L1-L35】【F:src/components/MindMap.js†L32-L187】
+
+## 10. Open Questions
 1. Should anonymous users get a limited sandbox map without auth for trial?  
 2. Is there a roadmap for collaborative editing (multi-user real-time)?  
 3. What compliance considerations (e.g., GDPR) apply to storing user-generated content and API keys? 
