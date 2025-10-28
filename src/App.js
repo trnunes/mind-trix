@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import MindMap from "./components/MindMap";
-import ApiKeyDialog from "./components/ApiKeyDialog";
 import WizardDialog from "./components/WizardDialog";
 import ConfirmDialog from "./components/ConfirmDialog";
 import DonationDialog from "./components/DonationDialog";
@@ -15,16 +14,20 @@ import { collection, addDoc, getDocs, query, where, doc, setDoc, deleteDoc } fro
 import { generateChildrenUsingGPT } from "./api/chatgpt";
 import { inject } from "@vercel/analytics";
 import "./styles.css";
+import {
+  saveEncryptedKey,
+  loadEncryptedKey,
+  decryptApiKey,
+} from "./utils/openaiKeyStorage";
 
 inject();
 
 function App() {
   const [mindMaps, setMindMaps] = useState([]);
   const [selectedMapId, setSelectedMapId] = useState(null);
-  const [apiKey, setApiKey] = useState(
-    localStorage.getItem("openai_api_key") || process.env.REACT_APP_OPENAI_API_KEY || ""
-  );
-  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
+  const [apiKey, setApiKey] = useState("");
+  const [isSyncingApiKey, setIsSyncingApiKey] = useState(false);
+  const [apiKeySyncError, setApiKeySyncError] = useState(null);
   const [isWizardDialogOpen, setIsWizardDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
@@ -52,6 +55,50 @@ function App() {
     });
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    const hydrateApiKey = async () => {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      if (user?.uid) {
+        setIsSyncingApiKey(true);
+        try {
+          const encrypted = await loadEncryptedKey({
+            firestore,
+            userId: user.uid,
+          });
+          if (encrypted) {
+            const decrypted = await decryptApiKey(user.uid, encrypted);
+            setApiKey(decrypted);
+          } else {
+            setApiKey("");
+          }
+          setApiKeySyncError(null);
+        } catch (error) {
+          console.error("Error loading encrypted API key:", error);
+          setApiKey("");
+          setApiKeySyncError(
+            "We couldn't load your saved OpenAI key. Please re-enter it."
+          );
+        } finally {
+          setIsSyncingApiKey(false);
+        }
+      } else {
+        const fallbackKey =
+          (typeof localStorage !== "undefined" &&
+            localStorage.getItem("openai_api_key")) ||
+          process.env.REACT_APP_OPENAI_API_KEY ||
+          "";
+        setApiKey(fallbackKey);
+        setIsSyncingApiKey(false);
+        setApiKeySyncError(null);
+      }
+    };
+
+    hydrateApiKey();
+  }, [user]);
 
   const loadMindMaps = async (userId) => {
     try {
@@ -90,6 +137,42 @@ function App() {
     setUser(null);
     setMindMaps([]);
     setSelectedMapId(null);
+    setApiKey("");
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem("openai_api_key");
+    }
+  };
+
+  const handlePersistApiKey = async (key) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    setApiKey(key);
+
+    if (user?.uid) {
+      setIsSyncingApiKey(true);
+      try {
+        await saveEncryptedKey({ firestore, userId: user.uid, apiKey: key });
+        setApiKeySyncError(null);
+        if (typeof localStorage !== "undefined") {
+          localStorage.removeItem("openai_api_key");
+        }
+      } catch (error) {
+        console.error("Error saving encrypted API key:", error);
+        setApiKeySyncError(
+          "We couldn't save your OpenAI key. It will be used for this session only."
+        );
+      } finally {
+        setIsSyncingApiKey(false);
+      }
+    } else if (typeof localStorage !== "undefined") {
+      if (key) {
+        localStorage.setItem("openai_api_key", key);
+      } else {
+        localStorage.removeItem("openai_api_key");
+      }
+    }
   };
 
   const handleWizardComplete = async (payload) => {
@@ -108,7 +191,7 @@ function App() {
     };
 
     try {
-      const subtopics = await generateChildrenUsingGPT(
+      const { items: subtopics } = await generateChildrenUsingGPT(
         payload.mainTopic || payload.description,
         [],
         apiKey,
@@ -263,15 +346,6 @@ function App() {
         )
       ) : (
         <>
-          <ApiKeyDialog
-            isOpen={isApiKeyDialogOpen}
-            onClose={() => setIsApiKeyDialogOpen(false)}
-            onSave={(key) => {
-              setApiKey(key);
-              setIsApiKeyDialogOpen(false);
-            }}
-          />
-
           <WizardDialog
             isOpen={isWizardDialogOpen}
             onClose={() => setIsWizardDialogOpen(false)}
@@ -338,7 +412,10 @@ function App() {
                   mindMap={selectedMap}
                   onMindMapChange={handleMapChange}
                   apiKey={apiKey}
-                  setApiKey={setApiKey}
+                  setApiKey={handlePersistApiKey}
+                  onOpenDonationDialog={handleOpenDonationDialog}
+                  apiKeySyncError={apiKeySyncError}
+                  isSyncingApiKey={isSyncingApiKey}
                   isLoading={isLoading}
                 />
               )}

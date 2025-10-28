@@ -1,0 +1,56 @@
+# OpenAI GPT-5 Responses API Quick Reference
+
+## Overview
+- Endpoint: `https://api.openai.com/v1/responses`
+- Authentication: `Authorization: Bearer <API_KEY>` header is required for every request.
+- Optional headers: `OpenAI-Organization` for organization scoping and `OpenAI-Project` when routing usage to a specific project.
+- Recommended transport: HTTPS `POST` with JSON payloads encoded as UTF-8.
+
+## Message Format
+Use the Responses API with structured role/content blocks. Each message is represented as an object containing a `role` and an array of `content` parts. For text prompts, pass a single part with `type: "text"`:
+
+```
+{
+  "model": "gpt-5-mini",
+  "input": [
+    {
+      "role": "system",
+      "content": [{ "type": "text", "text": "You are a helpful assistant." }]
+    },
+    {
+      "role": "user",
+      "content": [{ "type": "text", "text": "Summarize the agenda." }]
+    }
+  ],
+  "temperature": 0.7,
+  "max_output_tokens": 600
+}
+```
+
+## Response Shape
+A successful call returns a `response` object whose `output` array holds assistant messages. Extract the generated text from the first `output` item, looking for a `content` entry with `type: "output_text"`:
+
+```
+const outputMessage = data.output?.[0]?.content?.find(
+  (part) => part.type === "output_text"
+);
+const text = outputMessage?.text ?? "";
+```
+
+When `response_format` is set to `{ "type": "json_object" }`, the assistant must return JSON. Parse `text` using `JSON.parse`.
+
+## Error Handling
+- Rate limits: HTTP 429 with optional `Retry-After` header (seconds). Expose a cooldown timer to end users before retrying.
+- Authentication: HTTP 401/403 indicate revoked keys or project access issues. Prompt the user to refresh credentials.
+- Server issues: HTTP 5xx. Apply exponential backoff and surface friendly status messaging.
+
+## Model Selection Guidance
+- `gpt-5`: Highest quality reasoning, highest price. Ideal for premium summarization or planning.
+- `gpt-5-mini`: 4x cheaper than `gpt-5` with near-identical performance on short-form generation and JSON tasks, making it the best default for balanced cost and output quality.
+- `gpt-4.1-mini`: Legacy compatibility tier. Only consider if `gpt-5` family is unavailable.
+
+## Best Practices
+1. Keep prompts concise and seed system instructions with JSON output expectations when parsing.
+2. Capture `usage.total_tokens` from the response for analytics and budgeting.
+3. Never log raw API keys; store them encrypted at rest and in transit.
+4. Reuse HTTPS connections where possible to reduce latency.
